@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>课堂巡查数据分析系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body class="bg-gray-50">
+<!-- 顶部导航 -->
+<div class="bg-blue-700 text-white p-4 shadow">
+    <div class="container mx-auto flex justify-between items-center">
+        <h1 class="text-xl font-bold"><i class="fa fa-search"></i> 课堂巡查数据分析系统</h1>
+        <div>
+            <span id="user_show" class="mr-3">当前身份：巡查教师</span>
+            <button id="change_user" class="bg-white text-blue-700 px-2 py-1 rounded text-sm">切换身份</button>
+        </div>
+    </div>
+</div>
+
+<!-- 身份选择弹窗 -->
+<div id="user_box" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg w-80">
+        <h3 class="font-bold text-lg mb-3">选择身份</h3>
+        <select id="user_role" class="w-full border p-2 rounded mb-4">
+            <option value="巡查教师">巡查教师</option>
+            <option value="校长/管理员">校长/管理员</option>
+        </select>
+        <button id="confirm_user" class="bg-blue-700 text-white w-full py-2 rounded">确认进入</button>
+    </div>
+</div>
+
+<!-- 主内容区 -->
+<div class="container mx-auto p-4 mt-4">
+    <!-- 菜单 -->
+    <div class="flex gap-2 mb-4 flex-wrap">
+        <button onclick="showPage('add')" class="bg-blue-700 text-white px-4 py-2 rounded"><i class="fa fa-plus"></i> 新增巡查记录</button>
+        <button onclick="showPage('list')" class="bg-gray-700 text-white px-4 py-2 rounded"><i class="fa fa-list"></i> 查看巡查记录</button>
+        <button onclick="showPage('analysis')" class="bg-green-700 text-white px-4 py-2 rounded"><i class="fa fa-bar-chart"></i> 数据分析报表</button>
+    </div>
+
+    <!-- 1. 新增巡查页面 -->
+    <div id="page_add" class="bg-white p-5 rounded shadow mb-4">
+        <h2 class="text-lg font-bold mb-4 border-b pb-2">新增课堂巡查记录</h2>
+        <div class="grid md:grid-cols-2 gap-4">
+            <!-- 基础信息 -->
+            <div>
+                <label class="block font-medium mb-1">巡查日期</label>
+                <input type="date" id="check_date" class="w-full border p-2 rounded" required>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">班级</label>
+                <input type="text" id="check_class" class="w-full border p-2 rounded" placeholder="如：三年级2班" required>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">授课教师</label>
+                <input type="text" id="teacher_name" class="w-full border p-2 rounded" required>
+            </div>
+            <div>
+                <label class="block font-medium mb-1">巡查人</label>
+                <input type="text" id="checker" class="w-full border p-2 rounded" required>
+            </div>
+        </div>
+
+        <!-- 教师教学行为 -->
+        <div class="mt-5">
+            <h3 class="font-bold mb-2">一、教师教学行为巡查</h3>
+            <div class="grid md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block">1. 备课情况</label>
+                    <select id="tea_prepare" class="w-full border p-2 rounded">
+                        <option>备课充分</option><option>基本备课</option><option>未备课</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block">2. 引导合作学习</label>
+                    <select id="tea_coop" class="w-full border p-2 rounded">
+                        <option>积极引导</option><option>一般引导</option><option>未引导</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block">3. 学情检测</label>
+                    <select id="tea_test" class="w-full border p-2 rounded">
+                        <option>及时检测</option><option>少量检测</option><option>未检测</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block">4. 连续讲解是否超15分钟</label>
+                    <select id="tea_time" class="w-full border p-2 rounded">
+                        <option>否</option><option>是</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block">教师行为备注</label>
+                    <textarea id="tea_note" class="w-full border p-2 rounded" rows="2"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 学生学习行为 -->
+        <div class="mt-5">
+            <h3 class="font-bold mb-2">二、学生学习行为巡查</h3>
+            <div class="grid md:grid-cols-2 gap-3">
+                <div>
+                    <label class="block">1. 精力集中情况</label>
+                    <select id="stu_focus" class="w-full border p-2 rounded">
+                        <option>集中</option><option>一般</option><option>分散</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block">2. 学习任务完成</label>
+                    <select id="stu_task" class="w-full border p-2 rounded">
+                        <option>全部完成</option><option>部分完成</option><option>未完成</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block">3. 彩色记号笔标记</label>
+                    <select id="stu_mark" class="w-full border p-2 rounded">
+                        <option>规范使用</option><option>少量使用</option><option>未使用</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block">4. 合作学习秩序</label>
+                    <select id="stu_order" class="w-full border p-2 rounded">
+                        <option>有序有效</option><option>一般</option><option>混乱</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block">学生行为备注</label>
+                    <textarea id="stu_note" class="w-full border p-2 rounded" rows="2"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- 图片上传 -->
+        <div class="mt-5">
+            <h3 class="font-bold mb-2">三、现场图片上传</h3>
+            <input type="file" id="upload_img" accept="image/*" multiple class="border p-2 w-full rounded">
+            <div id="img_preview" class="mt-2 flex gap-2 flex-wrap"></div>
+        </div>
+
+        <!-- 提交按钮 -->
+        <button onclick="saveCheck()" class="mt-5 bg-blue-700 text-white px-4 py-2 rounded w-full">保存巡查记录</button>
+    </div>
+
+    <!-- 2. 巡查记录列表页面 -->
+    <div id="page_list" class="hidden bg-white p-5 rounded shadow mb-4">
+        <h2 class="text-lg font-bold mb-4 border-b pb-2">巡查记录总表</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full border text-sm">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="border p-2">日期</th>
+                        <th class="border p-2">班级</th>
+                        <th class="border p-2">授课教师</th>
+                        <th class="border p-2">巡查人</th>
+                        <th class="border p-2">教师情况</th>
+                        <th class="border p-2">学生情况</th>
+                        <th class="border p-2">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="check_list"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 3. 数据分析报表页面 -->
+    <div id="page_analysis" class="hidden bg-white p-5 rounded shadow">
+        <h2 class="text-lg font-bold mb-4 border-b pb-2">课堂巡查分析报表</h2>
+        <div class="grid md:grid-cols-2 gap-4 mb-5">
+            <div class="border p-3 rounded h-72">
+                <h3 class="font-bold mb-2">教师行为统计</h3>
+                <canvas id="chart_teacher"></canvas>
+            </div>
+            <div class="border p-3 rounded h-72">
+                <h3 class="font-bold mb-2">学生行为统计</h3>
+                <canvas id="chart_student"></canvas>
+            </div>
+        </div>
+        <div class="border p-4 rounded bg-gray-50">
+            <h3 class="font-bold mb-2">巡查总结报告</h3>
+            <div id="report_text" class="whitespace-pre-line text-sm leading-relaxed"></div>
+            <button onclick="exportReport()" class="mt-3 bg-green-700 text-white px-3 py-1 rounded">导出报告(PDF)</button>
+        </div>
+    </div>
+
+    <!-- 查看详情弹窗 -->
+    <div id="detail_box" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white p-5 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-auto">
+            <div class="flex justify-between mb-3">
+                <h3 class="font-bold">巡查详情</h3>
+                <button onclick="closeDetail()" class="text-gray-500"><i class="fa fa-times"></i></button>
+            </div>
+            <div id="detail_content"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 全局数据
+let check_data = JSON.parse(localStorage.getItem('check_data')) || [];
+let current_user = "巡查教师";
+let pages = ['page_add','page_list','page_analysis'];
+let img_files = [];
+
+// 页面加载
+window.onload = function(){
+    showPage('add');
+    renderList();
+    document.getElementById('confirm_user').onclick = function(){
+        current_user = document.getElementById('user_role').value;
+        document.getElementById('user_show').innerText = "当前身份："+current_user;
+        document.getElementById('user_box').style.display = 'none';
+    }
+    document.getElementById('change_user').onclick = function(){
+        document.getElementById('user_box').style.display = 'flex';
+    }
+    // 图片预览
+    document.getElementById('upload_img').onchange = function(e){
+        img_files = Array.from(e.target.files);
+        let preview = document.getElementById('img_preview');
+        preview.innerHTML = '';
+        img_files.forEach((f,i)=>{
+            let url = URL.createObjectURL(f);
+            preview.innerHTML += `<img src="${url}" class="h-16 rounded border">`;
+        });
+    }
+};
+
+// 切换页面
+function showPage(id){
+    pages.forEach(p=>{
+        document.getElementById(p).classList.add('hidden');
+    });
+    document.getElementById('page_'+id).classList.remove('hidden');
+    if(id=='list') renderList();
+    if(id=='analysis') makeAnalysis();
+}
+
+// 保存巡查记录
+function saveCheck(){
+    let data = {
+        id: Date.now(),
+        date: document.getElementById('check_date').value,
+        class: document.getElementById('check_class').value,
+        teacher: document.getElementById('teacher_name').value,
+        checker: document.getElementById('checker').value,
+        tea_prepare: document.getElementById('tea_prepare').value,
+        tea_coop: document.getElementById('tea_coop').value,
+        tea_test: document.getElementById('tea_test').value,
+        tea_time: document.getElementById('tea_time').value,
+        tea_note: document.getElementById('tea_note').value,
+        stu_focus: document.getElementById('stu_focus').value,
+        stu_task: document.getElementById('stu_task').value,
+        stu_mark: document.getElementById('stu_mark').value,
+        stu_order: document.getElementById('stu_order').value,
+        stu_note: document.getElementById('stu_note').value,
+        imgs: img_files.map(f=>URL.createObjectURL(f))
+    };
+    if(!data.date||!data.class||!data.teacher){alert('请填写完整基础信息');return;}
+    check_data.unshift(data);
+    localStorage.setItem('check_data',JSON.stringify(check_data));
+    alert('保存成功！');
+    document.querySelectorAll('input,textarea,select').forEach(i=>i.value='');
+    document.getElementById('img_preview').innerHTML = '';
+    img_files = [];
+}
+
+// 渲染记录列表
+function renderList(){
+    let list = document.getElementById('check_list');
+    list.innerHTML = '';
+    check_data.forEach(item=>{
+        list.innerHTML += `
+        <tr>
+            <td class="border p-2">${item.date}</td>
+            <td class="border p-2">${item.class}</td>
+            <td class="border p-2">${item.teacher}</td>
+            <td class="border p-2">${item.checker}</td>
+            <td class="border p-2 text-xs">${item.tea_prepare} | ${item.tea_coop}</td>
+            <td class="border p-2 text-xs">${item.stu_focus} | ${item.stu_order}</td>
+            <td class="border p-2"><button onclick="showDetail(${item.id})" class="text-blue-700">查看</button></td>
+        </tr>`;
+    });
+}
+
+// 查看详情
+function showDetail(id){
+    let item = check_data.find(d=>d.id==id);
+    let img_html = item.imgs.map(i=>`<img src="${i}" class="h-24 mr-2 mb-2 rounded border">`).join('');
+    document.getElementById('detail_content').innerHTML = `
+    <div class="text-sm space-y-3">
+        <p><b>日期：</b>${item.date} &nbsp;&nbsp; <b>班级：</b>${item.class}</p>
+        <p><b>授课教师：</b>${item.teacher} &nbsp;&nbsp; <b>巡查人：</b>${item.checker}</p>
+        <div><b>教师行为：</b><br>备课：${item.tea_prepare}，合作学习：${item.tea_coop}，学情检测：${item.tea_test}，连续讲解超15分钟：${item.tea_time}<br>备注：${item.tea_note||'无'}</div>
+        <div><b>学生行为：</b><br>精力：${item.stu_focus}，任务完成：${item.stu_task}，记号笔：${item.stu_mark}，合作秩序：${item.stu_order}<br>备注：${item.stu_note||'无'}</div>
+        <div><b>现场图片：</b><br>${img_html}</div>
+    </div>`;
+    document.getElementById('detail_box').style.display = 'flex';
+}
+function closeDetail(){document.getElementById('detail_box').style.display = 'none';}
+
+// 生成分析报表
+function makeAnalysis(){
+    if(check_data.length==0){document.getElementById('report_text').innerText='暂无巡查数据';return;}
+    // 统计教师行为
+    let tea_pre = {充分:0,基本:0,未备:0};
+    let tea_co = {积极:0,一般:0,未引导:0};
+    let stu_fo = {集中:0,一般:0,分散:0};
+    let stu_or = {有序:0,一般:0,混乱:0};
+    check_data.forEach(d=>{
+        if(d.tea_prepare.includes('充分'))tea_pre.充分++;
+        else if(d.tea_prepare.includes('基本'))tea_pre.基本++;
+        else tea_pre.未备++;
+        if(d.tea_coop.includes('积极'))tea_co.积极++;
+        else if(d.tea_coop.includes('一般'))tea_co.一般++;
+        else tea_co.未引导++;
+        if(d.stu_focus.includes('集中'))stu_fo.集中++;
+        else if(d.stu_focus.includes('一般'))stu_fo.一般++;
+        else stu_fo.分散++;
+        if(d.stu_order.includes('有序'))stu_or.有序++;
+        else if(d.stu_order.includes('一般'))stu_or.一般++;
+        else stu_or.混乱++;
+    });
+    // 绘制图表
+    new Chart(document.getElementById('chart_teacher'),{
+        type:'bar',
+        data:{labels=['备课充分','基本备课','未备课','积极引导合作','一般引导','未引导'],
+              datasets:[{data:[tea_pre.充分,tea_pre.基本,tea_pre.未备,tea_co.积极,tea_co.一般,tea_co.未引导],backgroundColor:'#3b82f6'}]}
+    });
+    new Chart(document.getElementById('chart_student'),{
+        type:'bar',
+        data:{labels=['精力集中','一般','分散','合作有序','一般','混乱'],
+              datasets:[{data:[stu_fo.集中,stu_fo.一般,stu_fo.分散,stu_or.有序,stu_or.一般,stu_or.混乱],backgroundColor:'#10b981'}]}
+    });
+    // 生成报告
+    let report = `一、巡查概况\n本次共统计巡查记录${check_data.length}条，覆盖${new Set(check_data.map(i=>i.class)).size}个班级，${new Set(check_data.map(i=>i.teacher)).size}名授课教师。\n\n二、教师教学情况\n1.备课：${(tea_pre.充分/check_data.length*100).toFixed(0)}%教师备课充分；\n2.合作学习引导：${(tea_co.积极/check_data.length*100).toFixed(0)}%教师能积极引导；\n3.连续讲解超15分钟问题需重点关注。\n\n三、学生学习情况\n1.精力集中：${(stu_fo.集中/check_data.length*100).toFixed(0)}%学生课堂专注；\n2.合作学习秩序：${(stu_or.有序/check_data.length*100).toFixed(0)}%班级有序有效；\n3.记号笔使用、任务完成度仍有提升空间。\n\n四、管理建议\n1.加强未备课、未引导合作学习教师的培训；\n2.规范学生课堂专注度与合作学习秩序；\n3.持续推广彩色记号笔标记学习法。`;
+    document.getElementById('report_text').innerText = report;
+}
+
+// 导出报告
+function exportReport(){
+    const {jsPDF} = jspdf;
+    const doc = new jsPDF();
+    doc.text("课堂巡查分析报告",20,20);
+    doc.text(document.getElementById('report_text').innerText,20,30);
+    doc.save('课堂巡查分析报告.pdf');
+}
+</script>
+</body>
+</html>
